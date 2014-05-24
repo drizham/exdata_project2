@@ -1,0 +1,35 @@
+## Read serialized objects
+NEI <- readRDS("summarySCC_PM25.rds")
+SCC <- readRDS("Source_Classification_Code.rds")
+
+## Convert into data.table and cleanup for memory savings
+library(data.table)
+NEI.DT = data.table(NEI)
+SCC.DT = data.table(SCC)
+rm(NEI)
+rm(SCC)
+
+## Obtain SCC codes for motor vehicle sources using EI.Sector variable
+motor.vehicle.scc = SCC.DT[grep("[Mm]obile|[Vv]ehicles", EI.Sector), SCC]
+
+## Aggregate Emissions for the above SCC by year and county and filter Baltimore City
+motor.vehicle.emissions.baltimore = NEI.DT[SCC %in% motor.vehicle.scc, sum(Emissions), by=c("year", "fips")][fips == "24510"]
+
+# Open the PNG device
+png(filename="plot5.png", width=480, height=480, units="px")
+
+## Plot emissions per year using ggplot2 plotting system
+## Emissions from motor vehicle sources decreased from 1999-2008 in Baltimore City, even though there was a blip in the year 2008.
+library(ggplot2)
+g = ggplot(motor.vehicle.emissions.baltimore, aes(year, V1))
+g + 
+  geom_point() + 
+  geom_line() +
+  labs(x = "Year") + labs(y = "Emissions") +
+  labs(title = "Baltimore City Motor Vehicle Emissions")
+
+ggsave(filename="plot5.png", width=4.80, height=4.80, dpi=100)  
+
+
+# Close the PNG device
+dev.off()
